@@ -1,0 +1,36 @@
+
+Qt Adapter For StoryText
+========================
+StoryText is a functional testing or acceptance testing tool.
+This adapts StoryText to the Qt GUI framework or toolkit.
+(Currently StoryText supports other frameworks, for example Gtk.)
+
+Intended Audience
+=================
+Experienced StoryText developers.
+
+Status
+======
+WORK IN PROGRESS.
+A partial proof of concept.
+This does not prove it is possible for Storytext to support Qt adequately.
+There could be unforeseen, insurmountable technical problems.
+It is incomplete (doesn't support much of the Qt widget set.)
+It works for a very small test case.
+
+Installation
+============
+You should have already installed TextTest (which includes StoryText.)
+
+Move this directory (qttoolkit) under texttest-3.22/source/storytext/lib/storytext,
+alongside the gtktoolkit directory.
+
+Apply the enclosed patch file adminactions.py.patch to the unpatched file further up the source tree.
+This patch: when you use TextTest/StoryText, Qt is a choice in the pulldown menu of QUI toolkits.
+
+
+
+
+
+
+
