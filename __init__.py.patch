@@ -1,0 +1,14 @@
+--- __init__.py	2011-11-13 04:40:38.000000000 -0500
++++ __init__.py.new	2012-06-06 12:02:56.162143729 -0400
+@@ -31,3 +31,11 @@
+         scriptEngine.addUiMapFiles(uiMapFiles)
+         scriptEngine.addCustomEventTypes(customEventTypes)
+     return scriptEngine.createShortcutBar()
++
++def setSUTReady():
++    ''' 
++    Tell StoryText SUT has created event loop and is about to enter it.
++    Qt adapter needs this so it can add idle handlers.
++    '''
++    if scriptEngine:
++        scriptEngine.setSUTReady()

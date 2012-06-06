@@ -21,12 +21,26 @@ It works for a very small test case.
 Installation
 ============
 You should have already installed TextTest (which includes StoryText.)
+Installation is a hack of the texttest directory.
+Do NOT do this on a production system.
+Also, if you have installed texttext (as opposed to just setting PYTHON_PATH to find it),
+you will need to adjust these instructions.
 
-Move this directory (qttoolkit) under texttest-3.22/source/storytext/lib/storytext,
-alongside the gtktoolkit directory.
+Move this directory under texttest-3.22/source/storytext/lib/storytext, alongside the gtktoolkit directory.
+Make a link to this directory named "qttoolkit".
+> cd texttest-3.22/source/storytext/lib/storytext
+> ln -s StoryTextQt qttoolkit.
 
-Apply the enclosed patch file adminactions.py.patch to the unpatched file further up the source tree.
-This patch: when you use TextTest/StoryText, Qt is a choice in the pulldown menu of QUI toolkits.
+Apply the enclosed patch file adminactions.py.patch to the unpatched file further up the texttest source tree.
+This patch does: when you use TextTest/StoryText, "Qt" is a choice in the pulldown menu of QUI toolkits.
+
+Apply the enclosed patch __init__.py.patch to the original: texttest-3.22/source/storytext/lib/storytext/__init__.py.
+This patch does: adds function setSUTReady() to storytext that the SUT calls just before entering the event loop.
+
+Test Case
+=========
+
+This has been tested on the enclosed Qt app "testSUT.py".
 
 
 

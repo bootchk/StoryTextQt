@@ -72,8 +72,8 @@ def main(args):
     mainWindow.setGeometry(100, 100, 500, 500)
     mainWindow.show()
     
-    import storytext
-    storytext.setSUTReady()
+    from storytext import setSUTReady
+    setSUTReady()
 
     sys.exit(app.exec_()) # Qt Main loop
 
