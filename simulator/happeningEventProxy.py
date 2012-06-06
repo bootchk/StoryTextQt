@@ -60,7 +60,7 @@ class QtEventProxy(QtHappeningProxy):
         filterObj = StorytextQtEventFilter(parent=communicantWidget, 
                                            eventType=self.__class__.eventQtType, 
                                            interceptMethod=interceptMethod,
-                                           proxyEvent=self)
+                                           interceptArg=self)
         #print filterObj
         # print self.widget.widget
         communicantWidget.installEventFilter(filterObj)

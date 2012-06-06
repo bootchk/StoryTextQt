@@ -572,6 +572,7 @@ class IdleScheduler:
         self.reset()
         
     def reset(self):
+        print "IdleScheduler.reset() called"
         self.idleHandler = None
         self.widgetsForDescribe = {}
         self.disabledWidgets = set()
@@ -582,13 +583,14 @@ class IdleScheduler:
       '''
       Intercede (filter) widget's event.
       
-      For GTK:
-      monitorWidget.connect(signal, self.scheduleDescribeCallback, signal)
+      GTK: monitorWidget.connect(signal, self.scheduleDescribeCallback, signal)
+      ???? what role is second use of signal as parameter?
       '''
+      print "describer.monitorWidgetEvent widget: type:", widget, eventType
       filterObj = StorytextQtEventFilter(parent=widget,
                                          eventType=eventType, 
                                          interceptMethod=interceptMethod,
-                                         proxyEvent=None) # ?????
+                                         interceptArg=widget)
       widget.installEventFilter(filterObj)
       
       
@@ -604,18 +606,31 @@ class IdleScheduler:
             self.monitorWidgetEvent(monitorWidget, signal, self.scheduleDescribeCallback)
             # GTK: monitorWidget.connect(signal, self.scheduleDescribeCallback, signal)
 
-    def getChildWidgets(self, widget):
-        """
-        if isinstance(widget, gtk.FileChooser):
-            # Don't worry about internals of file chooser, which aren't really relevant
-            return []
 
-        if isinstance(widget, gtk.Container):
-            return widget.get_children()
-        else:
-            return []
-        """
-        return widget.children()  # Qt
+    def isIgnoredWidget(self, widget):
+        # TODO: isinstance(widget, gtk.FileChooser):
+        # Don't worry about internals of file chooser, which aren't really relevant
+        return False
+          
+        
+        
+    def getChildWidgets(self, widget):
+        '''
+        Iterator over child widgets.
+        Except for certain widgets whose internals we don't monitor.
+        Post-condition: returned object MUST be a widget.
+        '''
+        if self.isIgnoredWidget(widget):
+            return
+        
+        '''
+        GTK: only gtk.Container widgets have children, but they are always widgets?
+        Qt: every widget can have children but they need not be widgets !!!
+        In particular, StoryText Qt adds QEventFilters as children.
+        '''
+        for child in widget.children(): # Qt
+          if isinstance(child, QWidget):
+            yield child
       
 
     def windowHidden(self, window, *args):
@@ -623,13 +638,16 @@ class IdleScheduler:
             self.visibleWindows.remove(window)
            
     def monitorBasics(self, widget):
+        '''
+        lkk I don't understand fully why storytext needs this.
+        '''
+      
         """
         if widget.isWindow(): # Qt isWindow() returns True for independent windows
             self.allWidgets.append(widget)
             # When a window is hidden, start again with monitoring
             # GTK: widget.connect("hide", self.windowHidden)
-            # Qt has no signal for hide
-            widget.
+            # Qt has no signal for hide widget.
             '''
             if widget.get_property("type") == gtk.WINDOW_POPUP:
                 return # Popup windows can't change visibility or sensitivity, don't monitor them
@@ -645,12 +663,15 @@ class IdleScheduler:
         for child in self.getChildWidgets(widget):
             self.monitorBasics(child)
             
+            
     def _monitorBasics(self, widget):
         """
         self.monitor(widget, [ "hide" ], prefix="Hiding")
         self.monitor(widget, [ "show" ], prefix="Showing ")
         """
-        self.monitorWidgetEvent(widget, eventType = QEvent.Hide, interceptMethod=self.scheduleDescribeCallback)
+        self.monitorWidgetEvent(widget, 
+                                eventType = QEvent.Hide, 
+                                interceptMethod=self.scheduleDescribeCallback)
         
         """
         # If widget has an action, monitor action for sensitive changes, else monitor widget
@@ -684,10 +705,15 @@ class IdleScheduler:
         for arg in args:
             if arg in signalMapping:
                 return signalMapping.get(arg)
+        # lkk If get here, programming error?
+        # Which map?
+        print "Missing widget in map?", widget
+
 
     def scheduleDescribeCallback(self, widget, *args):
         widgetData = self.lookupWidget(widget, *args)
-        self.scheduleDescribe(*widgetData)
+        if widgetData is not None:
+          self.scheduleDescribe(*widgetData)
 
     def scheduleDescribe(self, widget, prefix="Showing ", titleOnly=False, priority=1):
         otherPrefix, otherTitleOnly, otherPriority = self.widgetsForDescribe.get(widget, (None, None, None))
