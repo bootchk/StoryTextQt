@@ -11,9 +11,9 @@ from PySide.QtCore import QEvent
 from PySide.QtGui import QWidget
 
 # pydev shows an unresolved import but it works anyway???
-from treeviews import TreeViewDescriber, treeModelSignals # performTreeViewInterceptions, 
-from images import ImageDescriber # performImageInterceptions, 
-from eventFilter import StorytextQtEventFilter
+#from treeviews import TreeViewDescriber, treeModelSignals # performTreeViewInterceptions, 
+#from images import ImageDescriber # performImageInterceptions, 
+from ..eventFilter import StorytextQtEventFilter
 
 # Magic constants, can't really use default priorities because file choosers use them in many GTK versions.
 PRIORITY_STORYTEXT_IDLE = gobject.PRIORITY_DEFAULT_IDLE + 20
@@ -585,7 +585,10 @@ class IdleScheduler:
       For GTK:
       monitorWidget.connect(signal, self.scheduleDescribeCallback, signal)
       '''
-      filterObj = StorytextQtEventFilter(eventType, interceptMethod)
+      filterObj = StorytextQtEventFilter(parent=widget,
+                                         eventType=eventType, 
+                                         interceptMethod=interceptMethod,
+                                         proxyEvent=None) # ?????
       widget.installEventFilter(filterObj)
       
       

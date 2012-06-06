@@ -1,10 +1,11 @@
 
 """ Main entry point for simulator functionality """
 
-from PySide.QtGui import QMainWindow, QDialog, QFileDialog, QAbstractButton
+from PySide.QtGui import QMainWindow, QDialog, QFileDialog, QAbstractButton, QGraphicsView
 from PySide.QtCore import QCoreApplication, Slot
 
 import happeningSignalProxy
+import graphicsviewevents
 import windowevents
 # , filechooserevents, treeviewevents, 
 import miscevents
@@ -178,10 +179,26 @@ class UIMap(storytext.guishared.UIMap):
         return widgets
 """
 
+
+
+'''
+eventTypes is a table of configuration or specification.
+It specifies what StoryText monitors.
+See also customEventTypes.
+
+A tuple here is a (widgetClass, happeningClass).
+(actually specified as (widgetClass, [happeningClass,...]).
+
+A tuple asserts a different thing depending on type of happening:
+- widgetClass sends happeningSignalClass
+- widgetClass receives happeningEventClass
+(The meaning is different for gtk, where wdgetClass always RECEIVES happeningClass.)
+'''
 eventTypes = [
         (QMainWindow,         [ windowevents.DestroySignal,
                                 windowevents.CloseEvent ]),
-        (QAbstractButton,     [ happeningSignalProxy.ClickedSignal ])
+        (QAbstractButton,     [ happeningSignalProxy.ClickedSignal ]),
+        (QGraphicsView,       [ graphicsviewevents.MouseMoveEvent]),
         ]
 """
         (gtk.Button           , [ baseevents.SignalEvent ]),

@@ -27,6 +27,8 @@ class QtEventProxy(QtHappeningProxy):
     so we don't need to worry about accept(), ignore().
     '''
   
+    # Subclasses must have static var eventQtType
+  
     def __init__(self, eventName, widget, *args):
         GuiEvent.__init__(self, eventName, widget)
         self.recorderHandler = None
@@ -56,7 +58,7 @@ class QtEventProxy(QtHappeningProxy):
         self.recorderHandler = interceptMethod
         # Make the filter object a child of the communicantWidget?  Seems to work better than unparented.
         filterObj = StorytextQtEventFilter(parent=communicantWidget, 
-                                           eventType=self.eventQtType, 
+                                           eventType=self.__class__.eventQtType, 
                                            interceptMethod=interceptMethod,
                                            proxyEvent=self)
         #print filterObj

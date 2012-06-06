@@ -20,7 +20,8 @@ Thing from TK is intra-application signal from the TK arriving after window has 
 
 from happeningSignalProxy import SignalEvent
 from happeningEventProxy import QtEventProxy
-# from storytext.guishared import WidgetAdapter
+
+from PySide.QtCore import QEvent
 
 
 class CloseEvent(QtEventProxy):
@@ -32,6 +33,7 @@ class CloseEvent(QtEventProxy):
     '''
     # lkk Is name of event handler method, not a signal.
     signalName = "closeEvent"
+    eventQtType = QEvent.Close
 
 
 
