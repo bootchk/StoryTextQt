@@ -22,6 +22,7 @@ from happeningSignalProxy import SignalEvent
 from happeningEventProxy import QtEventProxy
 
 from PySide.QtCore import QEvent
+from PySide.QtGui import  QCloseEvent
 
 
 class CloseEvent(QtEventProxy):
@@ -30,10 +31,13 @@ class CloseEvent(QtEventProxy):
     It means to the app: the window is about to be destroyed.
     (Rarely used: Windows can also be closed programatically by calling close() method
     which (?) engenders "destroyed()" signal?)
+    
+    Note this event has no arguments to the widget method QWidget.closeEvent().
+    I.E. we don't reimplement getGenerationArguments() which defaults to empty list.
     '''
-    # lkk Is name of event handler method, not a signal.
     signalName = "closeEvent"
     eventQtType = QEvent.Close
+    eventQtFactory = QCloseEvent
 
 
 

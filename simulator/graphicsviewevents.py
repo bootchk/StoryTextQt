@@ -16,7 +16,9 @@ Event happening sequence:
 """
 
 from happeningEventProxy import QtEventProxy
-from PySide.QtCore import QEvent
+from PySide.QtCore import QEvent, QPoint, Qt
+from PySide.QtGui import  QMouseEvent
+
 
 class MouseMoveEvent(QtEventProxy):
     '''
@@ -24,3 +26,25 @@ class MouseMoveEvent(QtEventProxy):
     '''
     signalName = "mouseMoveEvent"
     eventQtType = QEvent.MouseMove
+    # !!! Many event types (MouseMove, MousePress, etc.) use the same event class
+    eventQtFactory = QMouseEvent
+    
+    
+    def getRealEvent(self, argumentString):
+        # TODO: reconstruct from argumentString
+        point = QPoint(x=10, y=20)
+        print "Creating MouseMoveEvent"
+        """
+        event = self.__class__.eventQtFactory(type=self.__class__.eventQtType,  # enum value e.g. Qt.MouseMove
+                                              pos=point,  
+                                              button=Qt.LeftButton, # button enum
+                                              buttons=Qt.LeftButton, # OR'd bit flag combination (chord) of buttons
+                                              modifiers= Qt.NoModifier ) # OR'd bit flag combination (chord) of keyboard modifiers
+        """
+        event = QMouseEvent(QEvent.MouseMove,
+                            point,  
+                            Qt.LeftButton, # button enum
+                            Qt.LeftButton, # OR'd bit flag combination (chord) of buttons
+                            Qt.NoModifier ) # OR'd bit flag combination (chord) of keyboard modifiers
+        
+        return event

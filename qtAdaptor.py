@@ -44,6 +44,7 @@ class QtScriptEngine(storytext.guishared.ScriptEngine):
         "destroyed" : "window destroyed",
         "closeEvent": "window closed",
         "clicked"   : "button clicked",
+        "mouseMoveEvent"  : "mouse moved"
         }
     columnSignalDescs = {
         "toggled.true": "checked box in column",

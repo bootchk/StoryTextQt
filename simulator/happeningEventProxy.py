@@ -3,12 +3,10 @@
 from storytext.guishared import GuiEvent
 
 from ..eventFilter import StorytextQtEventFilter
+from applicationUnderTest import getAppInstance
 from happeningProxy import QtHappeningProxy
 
-from PySide.QtCore import QEvent
-from PySide.QtGui import QCloseEvent
-
-
+# Note we don't import any Qt: this is ABC, subclasses specialize to Qt
 
 
 class QtEventProxy(QtHappeningProxy):
@@ -25,18 +23,18 @@ class QtEventProxy(QtHappeningProxy):
     But we use QEventFilters to intercept handlers
     (at the head of the propagation chain)
     so we don't need to worry about accept(), ignore().
+    
+    This is an abstract base class (not to be instantiated.)
+    Subclasses must have static vars:
+    - eventQtType whose value is the Qt enum value for type of the QEvent e.g. QEvent.Close
+    - eventQtFactory whose value is the class (factory) for the QEvent (subclass) e.g. QCloseEvent
     '''
   
-    # Subclasses must have static var eventQtType
-  
     def __init__(self, eventName, widget, *args):
+        assert widget is not None
         GuiEvent.__init__(self, eventName, widget)
         self.recorderHandler = None
-        # Type (an enum, not the class) of event in Qt
-        # Should be a specific subclass of QEvent
-        # TODO: hardcoded to QCloseEvent, should be parameter??
-        self.eventQtType = QEvent.Close
-    
+
     
     # @staticmethod
     @classmethod
@@ -69,19 +67,64 @@ class QtEventProxy(QtHappeningProxy):
 
     def getChangeMethod(self):
         ''' 
-        Return widget's method that handles event. 
+        Return a function object (callable) that creates self.
         
+        Called by the replayer (reading from the DRIVING usecase.)
+        Replayer then calls the changeMethod, which creates the event.
+        Then an eventFilter intercepts the event and stores a copy in the RESULT usecase.
+        (To be diffed with the DRIVING usecase.)
+        Then SUT handles the event.
+        
+        In Qt, QCoreApplication.postEvent ( QObject * receiver, QEvent * event )
+        
+        NOT the widget's method that handles event. 
         In Qt, by convention, the handler has the same name as the event, except for capitalization.
-        '''
-        # Return function object of widget's method having same name as this ProxyEvent
         result = eval( "self.widget." + self.signalName)
+        '''
+        """
+        Alternative, with unresolved problem
+        app = getAppInstance()
+        result = app.postEvent
+        """
+        '''
+        Call the handler directly, bypassing event loop and eventFilter.
+        Unfortunately, the standard usecase recording then fails,
+        since it comes from the eventFilter.
+        So we need to write to the usecase outside normal.
+        '''
+        result = eval( "self.widget." + self.signalName)
+        
         # print "getChangeMethod returns:", result
         return result
 
 
     def getGenerationArguments(self, argumentString):
+        '''
+        Return arguments for generating an event (for changeMethod, see above.)
+        
+        The changeMethod has an actual parameter that is an instance of a subclass of QEvent.
+        
+        !!! Note two uses of args: args to the factory which produces args to the changeMethod.
+        '''
         # print "getGenerationArguments"
-        return [QCloseEvent()]  # TODO:
+        receiver = self.widget
+        event = self.getRealEvent(argumentString)
+        return [receiver, event]
       
       
+    def getRealEvent(self, argumentString):
+        '''
+        Return real event corresponding to this proxy event.
+        
+        Call factory method with argumentString.
+        argumentString is a serialization from the usecase file.
+        
+        For some QEvents, the factory has NO args,  e.g. QCloseEvent()
+        This is the default implementation, where the argumentString is passed directly to the factory.
+        Often, the argument string is empty, e.g. QCloseEvent().
+        
+        Subclasses should reimplement if the factory requires arguments.
+        A reimplementation should produce actual args from argumentString.
+        '''
+        return self.__class__.eventQtFactory(argumentString)
       

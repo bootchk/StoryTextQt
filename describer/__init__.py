@@ -63,7 +63,7 @@ def isEnabled():
     return Describer.isEnabled()
 
 def describe(widget, prefix="Showing "):
-    print "describe"
+    print "describe() widget:", widget
     if isEnabled():
         setMonitoring()
         describer = describerClass(prefix)
@@ -85,6 +85,11 @@ def setMonitoring(loggingEnabled=False):
 
 def describeNewWindow(*args):
     return idleScheduler.describeNewWindow(*args)
+
+
+
+
+
 
 class Describer:
     logger = None
@@ -707,7 +712,7 @@ class IdleScheduler:
                 return signalMapping.get(arg)
         # lkk If get here, programming error?
         # Which map?
-        print "Missing widget in map?", widget
+        print "Missing widget in map?", widget, args
 
 
     def scheduleDescribeCallback(self, widget, *args):

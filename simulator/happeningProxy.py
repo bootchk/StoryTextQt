@@ -49,12 +49,24 @@ class QtHappeningProxy(GuiEvent):
         self.stopEmissionMethod = None
         self.destroyMethod = None
         
-        # recorder method to call when signal intercepted
+        # recorder method to call when happening is intercepted
         self.recorderHandler = None
         
+        # TODO: migrate to happeningSignalProxy
         # Name of widget's corresponding method to call to generate signal.
         self.widgetSignalCorrespondingMethodName = None
-        
+    
+    '''
+    lkk
+    By reimplementing GuiEvent.interceptMethod(),
+    prevent "NoneType has no attribute sendEvent" for getSelf(sendEvent()).
+    I.E. sendEvent is a class method and has no self instance.
+    We don't need to intercept any methods anyway???
+    '''
+    """
+    def interceptMethod(self, method, interceptClass):
+      pass
+    """
 
     @staticmethod
     def disableIntercepts(window):

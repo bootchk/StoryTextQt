@@ -2,8 +2,9 @@
 """ Main entry point for simulator functionality """
 
 from PySide.QtGui import QMainWindow, QDialog, QFileDialog, QAbstractButton, QGraphicsView
-from PySide.QtCore import QCoreApplication, Slot
+from PySide.QtCore import Slot
 
+from applicationUnderTest import getAppInstance
 import happeningSignalProxy
 import graphicsviewevents
 import windowevents
@@ -28,10 +29,6 @@ Signals from SUT to simulator, but not part of a use case.
 The simulator wants a signal on SUT shutdown,
 so storytext can interact with tester to map any events that are new to the map.
 '''
-
-def getAppInstance():
-    ''' Qt: exists one QApplication instance, or None. '''
-    return QCoreApplication.instance()
   
 def connectAppShutdownSignal(handler):
   ''' 
@@ -45,6 +42,8 @@ def connectAppShutdownSignal(handler):
   Note this is not quite a signal in GTK, but a special case?
   '''
   getAppInstance().aboutToQuit.connect(handler)
+  
+  
   
   
   
@@ -193,6 +192,8 @@ A tuple asserts a different thing depending on type of happening:
 - widgetClass sends happeningSignalClass
 - widgetClass receives happeningEventClass
 (The meaning is different for gtk, where wdgetClass always RECEIVES happeningClass.)
+
+!!! Keep the descriptions in sync in qtAdaptor.signalDescs
 '''
 eventTypes = [
         (QMainWindow,         [ windowevents.DestroySignal,
