@@ -87,6 +87,16 @@ class QtHappeningProxy(GuiEvent):
             return cls.signalName
 
 
+
+    @classmethod
+    def widgetHasHappeningSignature(cls, widgetAdaptor, happeningName):
+      '''
+      Pure virtual method: each subclass must implement.
+      '''
+      raise NotImplementedError
+    
+    
+    
     @classmethod
     def canHandleEvent(cls, widget, happeningName, *args):
         '''
@@ -154,34 +164,65 @@ class QtHappeningProxy(GuiEvent):
     """
     
     def shouldRecord(self, *args):
-        ''' 
+        '''
+        Should this happening be recorded in usecases?
+        
         Default is to only record happenings from visible widgets. 
         Subclasses may reimplement.
         '''
         return GuiEvent.shouldRecord(self, *args) and self.widgetVisible()
 
+
     def _outputForScript(self, *args):
         return self.name
 
 
+
+    '''
+    Properties of real widget.
+    Qt specific.
+    
+    This is tricky:
+    self.widget is a WidgetAdapter.
+    self.widget.isVisible calls WidgetAdapter.__getattr__ which returns the method of the real widget.
+    self.widget.isVisible() calls the read widget's method.
+    '''
     def widgetVisible(self):
-        # Qt
         return self.widget.isVisible()
 
     def widgetSensitive(self):
-        # Qt
         return self.widget.isEnabled()
 
     def describeWidget(self):
-        # Qt
         return repr(self.widget.objectName())
+
+    
+    '''
+    Real widget API.
+    self.widget is a WidgetAdapter.
+    Real widget is instance of class in the adapted GUI TK.
+    Note elsewhere the different ways to get attributes of real widget.
+    
+    '''
+    def getRealWidget(self):
+      return self.widget.widget
+    
+    
+    '''
+    A related API method is almost a pure virtual method of the API.
+    Some subclasses may need an instance of the real happening, e.g. a QEvent
+    Implemented as getRealEvent() subclass HappeningEventProxy.
+    HappeningSignalProxy at the moment has no need of the real signal, e.g. a QSignal.
+    '''
 
 
     def generate(self, argumentString):
         '''
         Called at replay time to generate real happening (to SUT) corresponding to self.
+        
+        argumentString is deserialized from usecase
         '''
-        self.checkWidgetStatus()  # super
+        self.checkWidgetStatus()  # call super, which bounces back as call to widgetVisible() etc.
         
         '''
         Create args for call to changeMethod.
@@ -193,8 +234,9 @@ class QtHappeningProxy(GuiEvent):
             # Assert self.changeMethod is a function object, a bound method of a widget
             # print "Generate happening:", self.signalName
             self.changeMethod(*args)
-        except TypeError:
-            print self.changeMethod, args
+        except TypeError as detail:
+            print "changeMethod", self.changeMethod, "Args:", args
+            # !!! getType() is WidgetAdapter.getType()
             raise UseCaseScriptError, "Cannot generate happening " + repr(self.signalName) + \
-                  " for  widget of type " + repr(self.widget.getType())
+                  " for  widget of type " + repr(self.widget.getType()) + str(detail)
 

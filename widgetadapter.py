@@ -10,6 +10,10 @@ class WidgetAdapter(storytext.guishared.WidgetAdapter):
     
     Adaption common to all GUI TK's is in inherited storytext.guishared.WidgetAdapter.
     lkk Not sure what pattern this is, how it works.
+    
+    !!! Super class __getattr__() allows methods of real widget to be called
+    without defining an adaption method in WidgetAdapter.
+    So this only defines adaption methods where __getattr__ is not adequate.
     '''
   
     ''' Parent/child relations. '''

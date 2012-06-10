@@ -3,10 +3,8 @@
 Adapt storytext to Qt
 """
 
-# import os
 # import logging
-# from threading import Timer
-# import signal
+import traceback
 
 # Generic (over toolkits) storytext
 import storytext.guishared # , storytext.replayer
@@ -36,16 +34,16 @@ class QtScriptEngine(storytext.guishared.ScriptEngine):
     eventTypes = simulator.eventTypes
     
     '''
-    map happeningName to displayable description.
+    map happeningName to a displayable description.
     Accessed by guishared.getDisplayName().
     happeningName must correspond to row in simulator.eventTypes.
     '''
     signalDescs = {
-        "destroyed" : "window destroyed",
         "closeEvent": "window closed",
         "clicked"   : "button clicked",
         "mouseMoveEvent"  : "mouse moved"
         }
+    # "destroyed" : "window destroyed",
     columnSignalDescs = {
         "toggled.true": "checked box in column",
         "toggled.false": "unchecked box in column",
@@ -115,12 +113,17 @@ class QtScriptEngine(storytext.guishared.ScriptEngine):
         we just need the one row whose class matches the widget class and whose signalName matches passed signalName.
         '''
         eventClasses = self.findEventClassesFor(widget) + simulator.universalEventClasses
+        print "Event classes for widget", eventClasses
         for eventClass in eventClasses:
             if eventClass.canHandleEvent(widget, stdSignalName, argumentParseData):
                 return eventClass(eventName, widget, argumentParseData)
-          
-        if simulator.fallbackEventClass.widgetHasSignal(widget, stdSignalName):
+        
+        """
+        print "FallbackEventClass for happening", stdSignalName
+        # lkk Why???
+        if simulator.fallbackEventClass.widgetHasHappeningSignature(widget, stdSignalName):
             return simulator.fallbackEventClass(eventName, widget, stdSignalName)
+        """
         '''
         lkk If we get here, it is not a programming error,
         since simulator.eventTypes is just a spec of (widgetClass, event) pairs that storytext
@@ -286,11 +289,13 @@ class UseCaseReplayer(storytext.guishared.IdleHandlerUseCaseReplayer):
             self.tryAddDescribeHandler()
         
     def makeDescribeHandler(self, method):
-        print "makeDescribeHandler"
+        print "makeDescribeHandler with method", method
+        traceback.print_stack() # debugging
         self.logger.debug("makeDescribeHandler")
         return self.handlers.idleAdd(method, priority=describer.PRIORITY_STORYTEXT_IDLE)
             
     def tryRemoveDescribeHandler(self):
+        print "tryRemoveDescribeHandler"
         if not self.isMonitoring() and not self.readingEnabled: # pragma: no cover - cannot test code with replayer disabled
             self.logger.debug("Disabling all idle handlers")
             self._disableIdleHandlers() # inherited from guishared, calls self.removeHandler
@@ -311,10 +316,12 @@ class UseCaseReplayer(storytext.guishared.IdleHandlerUseCaseReplayer):
         return return_value
 
     
-
+    """
+    gtk cruft
     def makeTimeoutReplayHandler(self, method, milliseconds):
         return self.timeoutAdd(time=milliseconds, method=method, priority=describer.PRIORITY_STORYTEXT_REPLAY_IDLE)
-
+    """
+    
     def makeIdleReplayHandler(self, method):
         return self.handlers.idleAdd(method, priority=describer.PRIORITY_STORYTEXT_REPLAY_IDLE)
 
@@ -343,9 +350,21 @@ class UseCaseReplayer(storytext.guishared.IdleHandlerUseCaseReplayer):
         if window.isVisible():
             describer.describeNewWindow(window)
 
-    def callReplayHandlerAgain(self):
-        return True # GTK's way of saying the handle should come again
 
+    def callReplayHandlerAgain(self):
+        '''
+        Boolean result of replayIdleHandler.
+        True causes the handler to continue, i.e. get called again next iteration of event loop.
+        False is the opposite, i.e. stops the idle handler.
+        
+        For Qt this is moot (but function must be implemented, its pure virtual in the base class?)
+        However, see elsewhere for hoq Qt handlers are stopped.
+        '''
+        return True
+    
+    
+    """
+    gtk cruft
     def runMainLoopWithReplay(self):
         print "runMainLoopWithReplay"
         while gtk.events_pending():
@@ -354,3 +373,4 @@ class UseCaseReplayer(storytext.guishared.IdleHandlerUseCaseReplayer):
             time.sleep(self.delay)
         if self.isActive():
             self.describeAndRun()
+    """

@@ -174,9 +174,9 @@ class SignalEvent(QtHappeningProxy):
         Possibly QMetaObject.activate() will send a signal but it is private.
         (In GTK:,every widget is a gobject that can emit(signalName))
         '''
-        assert self.widgetSignalCorrespondingMethodName is not None
+        assert self.__class__.widgetSignalCorrespondingMethodName is not None
         # Return function object of corresponding method
-        result = eval( "self.widget." + self.widgetSignalCorrespondingMethodName)
+        result = eval( "self.widget." + self.__class__.widgetSignalCorrespondingMethodName)
         # print "getChangeMethod returns:", result
         return result
 

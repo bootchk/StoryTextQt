@@ -6,7 +6,9 @@ from ..eventFilter import StorytextQtEventFilter
 from applicationUnderTest import getAppInstance
 from happeningProxy import QtHappeningProxy
 
-# Note we don't import any Qt: this is ABC, subclasses specialize to Qt
+
+# Note we only import any Qt for assertions: this is ABC, subclasses specialize to Qt
+from PySide.QtCore import QEvent
 
 
 class QtEventProxy(QtHappeningProxy):
@@ -50,7 +52,7 @@ class QtEventProxy(QtHappeningProxy):
         '''
         Connect (intercept) self event from GUI TK to handlerMethod, which is usually the recorder?
         
-        A widget (self.widget.widget) receives low-level event (QEvent) which self GuiEvent represents.
+        A widget (self.getRealWidget()) receives low-level event (QEvent) which self GuiEvent represents.
         Make recorder intercept ahead of widget, by installing QEventFilter.
         '''
         self.recorderHandler = interceptMethod
@@ -60,7 +62,7 @@ class QtEventProxy(QtHappeningProxy):
                                            interceptMethod=interceptMethod,
                                            interceptArg=self)
         #print filterObj
-        # print self.widget.widget
+        # print self.getRealWidget()
         communicantWidget.installEventFilter(filterObj)
         print "Installed event filter for event", self.signalName
 
@@ -81,8 +83,8 @@ class QtEventProxy(QtHappeningProxy):
         In Qt, by convention, the handler has the same name as the event, except for capitalization.
         result = eval( "self.widget." + self.signalName)
         '''
-        """
-        Alternative, with unresolved problem
+        
+        # Alternative, with unresolved problem with getSelf(postEvent)
         app = getAppInstance()
         result = app.postEvent
         """
@@ -93,11 +95,15 @@ class QtEventProxy(QtHappeningProxy):
         So we need to write to the usecase outside normal.
         '''
         result = eval( "self.widget." + self.signalName)
+        """
         
         # print "getChangeMethod returns:", result
         return result
 
 
+    
+    # These are generation args if changeMethod is app.postEvent.
+    
     def getGenerationArguments(self, argumentString):
         '''
         Return arguments for generating an event (for changeMethod, see above.)
@@ -107,11 +113,25 @@ class QtEventProxy(QtHappeningProxy):
         !!! Note two uses of args: args to the factory which produces args to the changeMethod.
         '''
         # print "getGenerationArguments"
-        receiver = self.widget
+        receiver = self.getRealWidget()
         event = self.getRealEvent(argumentString)
         return [receiver, event]
-      
-      
+    """
+    
+    def getGenerationArguments(self, argumentString):
+        '''
+        Return arguments for generating a happening (for changeMethod, see above.)
+        
+        The changeMethod has an actual parameter that is an instance of a subclass of QEvent
+        
+        !!! Note two uses of args: args to factory producing event which is an arg to the changeMethod.
+        '''
+        # print "getGenerationArguments"
+        event = self.getRealEvent(argumentString)
+        assert isinstance(event, QEvent)
+        return [event]
+    """
+    
     def getRealEvent(self, argumentString):
         '''
         Return real event corresponding to this proxy event.
@@ -120,11 +140,19 @@ class QtEventProxy(QtHappeningProxy):
         argumentString is a serialization from the usecase file.
         
         For some QEvents, the factory has NO args,  e.g. QCloseEvent()
-        This is the default implementation, where the argumentString is passed directly to the factory.
-        Often, the argument string is empty, e.g. QCloseEvent().
+        This is the default implementation:
+        the argumentString is not used because the factory has no args e.g. QCloseEvent().
         
         Subclasses should reimplement if the factory requires arguments.
-        A reimplementation should produce actual args from argumentString.
+        A reimplementation should produce actual args by parsing and deserializing argumentString.
         '''
-        return self.__class__.eventQtFactory(argumentString)
-      
+        # print "argumentString", argumentString
+        result = self.__class__.eventQtFactory()
+        assert isinstance(result, QEvent)
+        # print "realEvent", result, result.__class__
+        return result
+    
+    
+    # By reimplementing, avoid intercepting classmethod QCoreApplication.postEvent()
+    def interceptMethod(self, method, interceptClass):
+      pass

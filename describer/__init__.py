@@ -63,7 +63,7 @@ def isEnabled():
     return Describer.isEnabled()
 
 def describe(widget, prefix="Showing "):
-    print "describe() widget:", widget
+    # print "describe() widget:", widget
     if isEnabled():
         setMonitoring()
         describer = describerClass(prefix)
@@ -591,7 +591,7 @@ class IdleScheduler:
       GTK: monitorWidget.connect(signal, self.scheduleDescribeCallback, signal)
       ???? what role is second use of signal as parameter?
       '''
-      print "describer.monitorWidgetEvent widget: type:", widget, eventType
+      # print "describer.monitorWidgetEvent widget: type:", widget, eventType
       filterObj = StorytextQtEventFilter(parent=widget,
                                          eventType=eventType, 
                                          interceptMethod=interceptMethod,

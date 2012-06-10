@@ -75,7 +75,9 @@ def main(args):
     from storytext import setSUTReady
     setSUTReady()
 
-    sys.exit(app.exec_()) # Qt Main loop
+    result = app.exec_() # Qt event loop
+    print "App says app exit"
+    sys.exit(result) 
 
 
 if __name__ == "__main__":

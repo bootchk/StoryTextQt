@@ -196,11 +196,12 @@ A tuple asserts a different thing depending on type of happening:
 !!! Keep the descriptions in sync in qtAdaptor.signalDescs
 '''
 eventTypes = [
-        (QMainWindow,         [ windowevents.DestroySignal,
-                                windowevents.CloseEvent ]),
+        (QMainWindow,         [ windowevents.CloseEvent ]),
         (QAbstractButton,     [ happeningSignalProxy.ClickedSignal ]),
         (QGraphicsView,       [ graphicsviewevents.MouseMoveEvent]),
         ]
+# windowevents.DestroySignal,
+                                
 """
         (gtk.Button           , [ baseevents.SignalEvent ]),
         (gtk.ToolButton       , [ baseevents.SignalEvent ]),
