@@ -147,8 +147,10 @@ class UIMap(storytext.guishared.UIMap):
       
     @Slot()
     def handleSUTShutdown(self):
+      ''' Event loop is empty. '''
       print "handleSUTShutdown"
       self.fileHandler.write()
+
     
     
     def monitorChildren(self, widget, *args, **kw):

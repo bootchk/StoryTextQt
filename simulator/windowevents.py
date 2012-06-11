@@ -9,6 +9,8 @@ Window closing happening sequence:
 - closeEvent handler optionally calls hide() method of window
 - OR closeEvent handler optionally(!) calls destroy() method of window (a closed window is not automatically destroyed.)
 -- destroy() method emits destroyed() signal
+- if last toplevel window is closed, Qt optionally quits app
+- OR closeEvent handler of apps main window quits app
 
 Distinguish:          thing from user           AND     thing from TK
 Qt thing/handler:     QCloseEvent/closeEvent()        "destroyed" signal/*any connected slot*
@@ -43,7 +45,7 @@ class CloseEvent(QtEventProxy):
 
 class DestroySignal(SignalEvent):
     ''' 
-    Happening signal from window when window is closed (sic).
+    Happening signal from window when window is destroyed (sic).
     '''
   
     # QT "closeEvent" is a low-level event from window manager, here need high-level signal

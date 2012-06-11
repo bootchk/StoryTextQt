@@ -712,7 +712,7 @@ class IdleScheduler:
                 return signalMapping.get(arg)
         # lkk If get here, programming error?
         # Which map?
-        print "Missing widget in map?", widget, args
+        # print "Missing widget in map?", widget, args
 
 
     def scheduleDescribeCallback(self, widget, *args):

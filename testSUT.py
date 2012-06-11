@@ -63,7 +63,11 @@ class MainWindow(QMainWindow):
       
     def closeEvent(self, event):
       print "App says main window closed"
-      pass
+      # !!! Since reimplementing, don't forget to call super else window doesn't close
+      super(MainWindow, self).closeEvent(event)
+      
+      # ??? For unknown reason, app is not quitting on last window closed.  Force
+      QCoreApplication.instance().quit()
         
         
 def main(args):

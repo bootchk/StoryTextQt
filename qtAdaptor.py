@@ -9,16 +9,18 @@ import traceback
 # Generic (over toolkits) storytext
 import storytext.guishared # , storytext.replayer
 
-# Qt special submodules
+# Qt specialized submodules (similar to implementations for other GUI TK's.)
 import widgetadapter
 import describer
 # interception modules
 # import treeviewextract
 import simulator
 
+# For now, unique to Qt adaption
+from idleHandlerSet import HandlerSet
 
 
-from PySide.QtCore import QObject, QAbstractEventDispatcher, QCoreApplication
+from PySide.QtCore import QCoreApplication
 
 # from ordereddict import OrderedDict
 
@@ -70,7 +72,7 @@ class QtScriptEngine(storytext.guishared.ScriptEngine):
       (some Qt methods depend, few GTK methods depend.)
       '''
       print "SE.setSUTReady"
-      self.replayer.handlers.captureApplication()
+      self.replayer.handlers.captureApplicationAndStartDelayedIdleHandlers()
       self.uiMap.doSUTReady()
       
       
@@ -113,7 +115,7 @@ class QtScriptEngine(storytext.guishared.ScriptEngine):
         we just need the one row whose class matches the widget class and whose signalName matches passed signalName.
         '''
         eventClasses = self.findEventClassesFor(widget) + simulator.universalEventClasses
-        print "Event classes for widget", eventClasses
+        # print "Event classes for widget", eventClasses
         for eventClass in eventClasses:
             if eventClass.canHandleEvent(widget, stdSignalName, argumentParseData):
                 return eventClass(eventName, widget, argumentParseData)
@@ -160,108 +162,6 @@ class QtScriptEngine(storytext.guishared.ScriptEngine):
 
 
 
-class HandlerSet(QObject):
-  '''
-  A set of event loop handlers (timers.)
-  
-  Responsibility:
-  - know event loop
-  - add and delete handlers
-  - dispatch timer expirations (timeouts)
-  Stereotype: Coordinator
-  
-  Specialized for Qt.
-  Inherits QObject, which implements timers in Qt.
-  '''
-  def __init__(self):
-    super(HandlerSet, self).__init__()
-    self.handlers = {}  # map id to method
-    self.eventLoop = None
-
-    """
-    This doesn't work yet because Storytext messes the signal?
-    # Set alarm signal handler and a 10-second alarm
-    signal.signal(signal.SIGALRM, self.captureApplication)
-    signal.alarm(10)
-    """
-    """
-    This doesn't work.  Because it is a separate thread from the app?
-    # Start a Python timer to later capture the event loop
-    timer = Timer(20, self.captureApplication)
-    timer.start()
-    """
-    
-  
-  def captureApplication(self):
-    ''' Capture the SUT event loop and install delayed handlers. '''
-    # Get Qt event loop. Available before QApplication is created via classmethod on QAED
-    self.eventLoop = QAbstractEventDispatcher.instance()
-    if self.eventLoop is None or self.eventLoop == 0:
-      # logger not exist?
-      # self.logger.debug("No event loop yet?")
-      print "No event loop yet?"
-    else:
-      print "Captured event loop"
-      assert self.needIdle is not None
-      # Install delayed idle handler
-      timerID = self._idleAdd(self.needIdle)
-      # Hack: put it in super (guishared) 
-      self.idleHandler = timerID
-    
-    
-  def idleAdd(self, method, priority):
-    ''' 
-    Add handler to be called each iteration of event loop.
-    
-    Differs from other GUI TK's: delays adding idle handler until later if no event loop.
-    
-    Implementation in Qt is a timer with time=0.
-    Call methods of inherited QObject.
-    '''
-    # print "idleAdd", method
-    if self.eventLoop is None:
-      # print "Delaying"
-      self.needIdle = method
-      return None
-    else:
-      return self._idleAdd(method)
-   
-  
-  def _idleAdd(self, method):
-    ''' 
-    Add idle handler.
-    
-    Precondition: event loop exists so can create timers on it.
-    '''
-    timerID = self.startTimer(0) # Zero means every iteration of event loop
-    if timerID == 0:
-      raise RuntimeError, "Could not start timer, no event loop?"
-    else:
-      self.handlers[timerID]=method
-    return timerID
-   
-   
-  def timeoutAdd(self, time, method, priority):
-    print "timeoutAdd"
-    return
-  
-  
-  def removeHandler(self, handler):
-    ''' 
-    Remove (kill) a handler.
-    Note there may be race conditions.
-    '''
-    self.killTimer (handler)
-    del self.handlers[handler]
-    
-    
-  def timerEvent(self, event):
-    ''' 
-    Callback for timer expired. Dispatch on ID. 
-    In Qt, timer is periodic, continues to run.
-    '''
-    # print "dispatch timerEvent"
-    self.handlers[event.timerId()]()  # method call
     
     
     
@@ -272,28 +172,79 @@ class UseCaseReplayer(storytext.guishared.IdleHandlerUseCaseReplayer):
 
         self.handlers = HandlerSet()
         
+        self.startedIdleDescriber = False  # Counter to prevent describing twice?
+        
         # Call to super will call self and thus must follow create self.handlers.
         # super(UseCaseReplayer, self).__init__(*args)  # if inherits new-style class object
         storytext.guishared.IdleHandlerUseCaseReplayer.__init__(self, *args)
         
+        
         """
         # Anyone calling events_pending doesn't mean to include our logging events
         # so we intercept it and return the right answer for them...
-        self.orig_events_pending = gtk.events_pending
-        gtk.events_pending = self.events_pending
+        self.interceptEventsPendingMethod()
         """
     
     def addUiMap(self, uiMap):
         self.uiMap = uiMap
         if not self.loggerActive:
             self.tryAddDescribeHandler()
+    
+    '''
+    lkk Reimplement to fix app shutdown problems
+    This is called:
+    1) when a usecase is at EOF
+    AND there are no more usecases
+    2) when a recorder is active
+    etc. (I don't really understand the complex state when this is called.)
+    
+    Also, the generic code in guishared is gtk specific and doesn't remove the replayer idleHandler,
+    only sets the local self.idleHandler = None (and the idleHandler stops later when it gets
+    the return value of False.)
+    
+    For our purpose, insure the replayer idleHandler is stopped and don't start the describeHandle
+    if the app is trying to quit.
+    '''
+    """
+    The problem with app shutdown was fixed by adding app.quit() to SUT.
+    The problem was that automatic shutdown on last window closed did not shutdown app.
+    Possibly because still timers in the event loop?
+    Anyway, the solution of calling app.quit on main window close in the SUT
+    allows the default implementation of tryAddDescribeHandler to work.
+    We don't need what follows, which was an attempt to make sure there are no timers left in the event loop.
+    
+    I leave this cruft here because I still don't understand why the describeHandler is reinstalled
+    and if it is preventing automatic app shutdown on last window close.
+    
+    def tryAddDescribeHandler(self):
+        print "Qt reimplemented qtAdaptor.UseCaseReplayer.tryAddDescribeHandler"
+        # Stop the replayer idleHandler
+        self.handlers.stopAnyTimers()
         
+        '''
+        TODO: under what conditions should a describeHandler be started?
+        '''
+        
+        # This is not right because it doesn't record any usecases on startup.
+        # if self.readingEnabled:
+        if not self.startedIdleDescriber:
+        # if self.isMonitoring():
+            self.makeDescribeHandler(self.handleNewWindows)
+            self.startedIdleDescriber = True  # So won't start a second time
+    """    
+
+            
     def makeDescribeHandler(self, method):
-        print "makeDescribeHandler with method", method
-        traceback.print_stack() # debugging
+        #print "makeDescribeHandler with method", method
+        #traceback.print_stack() # debugging
         self.logger.debug("makeDescribeHandler")
         return self.handlers.idleAdd(method, priority=describer.PRIORITY_STORYTEXT_IDLE)
-            
+      
+    """
+    All shortcut stuff excised.
+    
+    In gtktoolkit, this was called from the shortcut stuff
+    
     def tryRemoveDescribeHandler(self):
         print "tryRemoveDescribeHandler"
         if not self.isMonitoring() and not self.readingEnabled: # pragma: no cover - cannot test code with replayer disabled
@@ -301,7 +252,15 @@ class UseCaseReplayer(storytext.guishared.IdleHandlerUseCaseReplayer):
             self._disableIdleHandlers() # inherited from guishared, calls self.removeHandler
             if self.uiMap:
                 self.uiMap.windows = [] # So we regenerate everything next time around
-
+    """
+    
+    """
+    TODO:
+    
+    def interceptEventsPendingMethod(self):
+      self.orig_events_pending = gtk.events_pending
+      gtk.events_pending = self.events_pending
+    
     def events_pending(self): # pragma: no cover - cannot test code with replayer disabled
         if not self.isActive():
             self.logger.debug("Removing idle handler for descriptions")
@@ -314,10 +273,9 @@ class UseCaseReplayer(storytext.guishared.IdleHandlerUseCaseReplayer):
                 self.logger.debug("Re-adding idle handler for descriptions")
                 self.tryAddDescribeHandler()
         return return_value
-
     
-    """
-    gtk cruft
+    cruft?
+    
     def makeTimeoutReplayHandler(self, method, milliseconds):
         return self.timeoutAdd(time=milliseconds, method=method, priority=describer.PRIORITY_STORYTEXT_REPLAY_IDLE)
     """
@@ -354,11 +312,13 @@ class UseCaseReplayer(storytext.guishared.IdleHandlerUseCaseReplayer):
     def callReplayHandlerAgain(self):
         '''
         Boolean result of replayIdleHandler.
-        True causes the handler to continue, i.e. get called again next iteration of event loop.
-        False is the opposite, i.e. stops the idle handler.
+        
+        For GTK:
+        - True causes the handler to continue, i.e. get called again next iteration of event loop.
+        - False is the opposite, i.e. stops the idle handler.
         
         For Qt this is moot (but function must be implemented, its pure virtual in the base class?)
-        However, see elsewhere for hoq Qt handlers are stopped.
+        However, see elsewhere for how Qt handlers are stopped.
         '''
         return True
     
