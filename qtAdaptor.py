@@ -39,11 +39,13 @@ class QtScriptEngine(storytext.guishared.ScriptEngine):
     map happeningName to a displayable description.
     Accessed by guishared.getDisplayName().
     happeningName must correspond to row in simulator.eventTypes.
+    happeningName must be name of a Qt signal or name of a Qt handler method for a QEvent
     '''
     signalDescs = {
         "closeEvent": "window closed",
         "clicked"   : "button clicked",
-        "mouseMoveEvent"  : "mouse moved"
+        "mouseMoveEvent"  : "mouse moved",
+        "mousePressEvent" : "mouse button pressed",
         }
     # "destroyed" : "window destroyed",
     columnSignalDescs = {
@@ -106,7 +108,7 @@ class QtScriptEngine(storytext.guishared.ScriptEngine):
         return UseCaseReplayer(self.uiMap, universalLogging, self.recorder)
                                 
     def _createSignalEvent(self, eventName, signalName, widget, argumentParseData):
-        print "_createSignalEvent", eventName, signalName # , widget
+        print "_createSignalEvent", eventName, signalName, widget
         stdSignalName = signalName.replace("_", "-")
         '''
         lkk ??? I don't understand why iterate over classes.
@@ -115,9 +117,10 @@ class QtScriptEngine(storytext.guishared.ScriptEngine):
         we just need the one row whose class matches the widget class and whose signalName matches passed signalName.
         '''
         eventClasses = self.findEventClassesFor(widget) + simulator.universalEventClasses
-        # print "Event classes for widget", eventClasses
+        print "Event classes for widget", eventClasses
         for eventClass in eventClasses:
             if eventClass.canHandleEvent(widget, stdSignalName, argumentParseData):
+                # Call class factory and return instance
                 return eventClass(eventName, widget, argumentParseData)
         
         """

@@ -200,8 +200,9 @@ A tuple asserts a different thing depending on type of happening:
 eventTypes = [
         (QMainWindow,         [ windowevents.CloseEvent ]),
         (QAbstractButton,     [ happeningSignalProxy.ClickedSignal ]),
-        (QGraphicsView,       [ graphicsviewevents.MouseMoveEvent]),
+        (QGraphicsView,       [ graphicsviewevents.MouseButtonPressEvent]),
         ]
+# graphicsviewevents.MouseMoveEvent,
 # windowevents.DestroySignal,
                                 
 """

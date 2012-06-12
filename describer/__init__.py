@@ -533,7 +533,8 @@ class Describer:
         if self.prefix == updateDesc:
             return self.logger.info("\n" + self.prefix + " " + title)
 
-        idleScheduler.monitor(window, [ "notify::title" ], updateDesc, titleOnly=True)
+        ## idleScheduler.monitor(window, [ "notify::title" ], updateDesc, titleOnly=True)
+        
         message = "-" * 10 + " " + title + " " + "-" * 10
         self.logger.info("\n" + message)
         """
@@ -583,22 +584,7 @@ class IdleScheduler:
         self.disabledWidgets = set()
         self.enabledWidgets = set()
     
-    # lkk
-    def monitorWidgetEvent(self, widget, eventType, interceptMethod):
-      '''
-      Intercede (filter) widget's event.
-      
-      GTK: monitorWidget.connect(signal, self.scheduleDescribeCallback, signal)
-      ???? what role is second use of signal as parameter?
-      '''
-      # print "describer.monitorWidgetEvent widget: type:", widget, eventType
-      filterObj = StorytextQtEventFilter(parent=widget,
-                                         eventType=eventType, 
-                                         interceptMethod=interceptMethod,
-                                         interceptArg=widget)
-      widget.installEventFilter(filterObj)
-      
-      
+
     def monitor(self, monitorWidget, signals, prefix="", describeWidget=None, titleOnly=False, priority=1):
         if describeWidget is None:
             describeWidget = monitorWidget
@@ -612,6 +598,22 @@ class IdleScheduler:
             # GTK: monitorWidget.connect(signal, self.scheduleDescribeCallback, signal)
 
 
+    # lkk
+    def monitorWidgetEvent(self, widget, eventType, interceptMethod):
+      '''
+      Intercede (filter) widget's event.
+      
+      GTK: monitorWidget.connect(signal, self.scheduleDescribeCallback, signal)
+      ???? what role is second use of signal as parameter?
+      '''
+      # print "describer.monitorWidgetEvent widget: type:", widget, eventType
+      filterObj = StorytextQtEventFilter(parent=widget,
+                                         eventType=eventType, 
+                                         interceptMethod=interceptMethod,
+                                         interceptArgs=[])   # ? eventType?
+      widget.installEventFilter(filterObj)
+      
+      
     def isIgnoredWidget(self, widget):
         # TODO: isinstance(widget, gtk.FileChooser):
         # Don't worry about internals of file chooser, which aren't really relevant
@@ -643,6 +645,8 @@ class IdleScheduler:
             self.visibleWindows.remove(window)
            
     def monitorBasics(self, widget):
+        return
+      
         '''
         lkk I don't understand fully why storytext needs this.
         '''
@@ -704,8 +708,28 @@ class IdleScheduler:
             else:
                 self.disabledWidgets.add(desc)
         self.tryEnableIdleHandler()
-    
+
+
+    def scheduleDescribeCallback(self, widget, realEvent, *args):
+        '''
+        A callback.
+        For intercepted event, e.g. hide.
+        ?? schedule a describe at a future time?
+        '''
+        widgetData = self.lookupWidget(widget, *args)
+        if widgetData is not None:
+          self.scheduleDescribe(*widgetData)
+
     def lookupWidget(self, widget, *args):
+        '''
+        Return data(?) for widget.
+        
+        Precondition: 
+        args == [] 
+        or args is list of signal and self.widgetMapping[widget] is not None
+        IOW if signals are passed, the widget must have a signalMapping
+        (self.widgetMapping is a dictionary of dictionary (returning a signalMapping for widget.)
+        '''
         signalMapping = self.widgetMapping.get(widget)
         for arg in args:
             if arg in signalMapping:
@@ -715,10 +739,6 @@ class IdleScheduler:
         # print "Missing widget in map?", widget, args
 
 
-    def scheduleDescribeCallback(self, widget, *args):
-        widgetData = self.lookupWidget(widget, *args)
-        if widgetData is not None:
-          self.scheduleDescribe(*widgetData)
 
     def scheduleDescribe(self, widget, prefix="Showing ", titleOnly=False, priority=1):
         otherPrefix, otherTitleOnly, otherPriority = self.widgetsForDescribe.get(widget, (None, None, None))
