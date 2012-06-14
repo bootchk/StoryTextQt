@@ -16,12 +16,13 @@ Event happening sequence:
 - events are NOT propagated back up to parents of QGraphicsItems
 """
 
-from happeningEventProxy import QtEventProxy
+#from happeningEventProxy import QtEventProxy
+from happeningViewportEventProxy import QtViewportEventProxy
 from PySide.QtCore import QEvent, QPoint, Qt
 from PySide.QtGui import  QMouseEvent
 
 
-class MouseEvent(QtEventProxy):
+class MouseEvent(QtViewportEventProxy): # WAS QtEventProxy
     '''
     Abstract Base Class for low-level event from Qt meaning input from pointer device (e.g. mouse).
     
@@ -36,29 +37,51 @@ class MouseEvent(QtEventProxy):
     
     
     def getRealEvent(self, argumentString):
-        # TODO: reconstruct from argumentString
-        point = QPoint(x=10, y=20)
-        print "Creating MouseEvent"
+        ''' Deserialize '''
+        args = self._parseArgString(argumentString)
+        point = QPoint(args[0], args[1])
+        button = self._encodeButton(args[2])
         event = QMouseEvent(self.eventQtType,
                             point,  
-                            Qt.NoButton, # button enum
-                            Qt.NoButton, # OR'd bit flag combination (chord) of buttons
+                            button, # Qt.NoButton, # button enum
+                            button, # Qt.NoButton, # OR'd bit flag combination (chord) of buttons
                             Qt.NoModifier ) # OR'd bit flag combination (chord) of keyboard modifiers
+        # print "Created MouseEvent", repr(event), "x is", event.x()
         return event
+    
+    
+    def _parseArgString(self, argumentString):
+      ''' List int() conversion of words of argumentString '''
+      return map(int, argumentString.split())
       
-      
+    def _encodeButton(self, buttonValue):
+      if buttonValue == 0:
+        return Qt.NoButton
+      elif buttonValue == 1:
+        return Qt.LeftButton
+      elif buttonValue == 2:
+        return Qt.RightButton
+      elif buttonValue == 4:
+        return Qt.MidButton
+         
+         
     def outputForScript(self, widget, realEvent, *args):
       '''
       Serialize. Return string repr of event and its attributes.
       IOW adapt event to usecase command.
       Called at record time.
+      
+      Qt has int coords.
+      
+      Qt NOT have time of event.
+      TODO: do we need time and can we construct it?
+      
+      Note button() returns an enum object, not a numeric object: convert to int then str.
       '''
-      # print "ofs called, widget is", happeningProxy, realEvent
-      # print "Event ", event.x, " ", event.y
-      # Qt has int coords, but not time of event.
-      # TODO: do we need time and can we construct it?
-      return " ".join(( self.name, str(realEvent.x()), str(realEvent.y()), str(realEvent.button()) ))
-      # TODO need decode button
+      return " ".join(( self.name, 
+                        str(realEvent.x()),
+                        str(realEvent.y()),
+                        str(int(realEvent.button())) ))
 
 
 

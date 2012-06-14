@@ -64,12 +64,12 @@ class QtEventProxy(QtHappeningProxy):
         #print filterObj
         # print self.getRealWidget()
         communicantWidget.installEventFilter(filterObj)
-        print "Installed event filter for event", self.signalName
+        # print "Installed event filter for event", self.signalName
 
 
     def getChangeMethod(self):
         ''' 
-        Return a function object (callable) that creates self.
+        Return a function object (callable) of the SUT that creates self's real event.
         
         Called by the replayer (reading from the DRIVING usecase.)
         Replayer then calls the changeMethod, which creates the event.
@@ -83,15 +83,15 @@ class QtEventProxy(QtHappeningProxy):
         In Qt, by convention, the handler has the same name as the event, except for capitalization.
         result = eval( "self.widget." + self.signalName)
         '''
-        
-        # Alternative, with unresolved problem with getSelf(postEvent)
+        # During development, was a  problem with getSelf(postEvent)
         app = getAppInstance()
         result = app.postEvent
+        
         """
         '''
+        Alternative:
         Call the handler directly, bypassing event loop and eventFilter.
-        Unfortunately, the standard usecase recording then fails,
-        since it comes from the eventFilter.
+        Unfortunately, the standard usecase recording then fails, since it comes from the eventFilter.
         So we need to write to the usecase outside normal.
         '''
         result = eval( "self.widget." + self.signalName)
@@ -102,8 +102,10 @@ class QtEventProxy(QtHappeningProxy):
 
 
     
-    # These are generation args if changeMethod is app.postEvent.
-    
+    '''
+    Generation args if changeMethod is app.postEvent.
+    If we were to call the SUT handler method, generation args would just be: return [event]
+    '''
     def getGenerationArguments(self, argumentString):
         '''
         Return arguments for generating an event (for changeMethod, see above.)
@@ -115,22 +117,9 @@ class QtEventProxy(QtHappeningProxy):
         # print "getGenerationArguments"
         receiver = self.getRealWidget()
         event = self.getRealEvent(argumentString)
-        return [receiver, event]
-    """
-    
-    def getGenerationArguments(self, argumentString):
-        '''
-        Return arguments for generating a happening (for changeMethod, see above.)
-        
-        The changeMethod has an actual parameter that is an instance of a subclass of QEvent
-        
-        !!! Note two uses of args: args to factory producing event which is an arg to the changeMethod.
-        '''
-        # print "getGenerationArguments"
-        event = self.getRealEvent(argumentString)
         assert isinstance(event, QEvent)
-        return [event]
-    """
+        return [receiver, event]
+    
     
     def getRealEvent(self, argumentString):
         '''
@@ -153,6 +142,13 @@ class QtEventProxy(QtHappeningProxy):
         return result
     
     
-    # By reimplementing, avoid intercepting classmethod QCoreApplication.postEvent()
+    '''
+    This is reimplemented to avoid a problem in generic StoryText code
+    (where it intercepts methods to avoid knock-on effects)
+    The problem is that getSelf() tries but fails to intercept classmethod QCoreApplication.postEvent().
+    getSelf() is supposed to find self (instance) of methods.
+    Since this subverts generic StoryText interception to avoid knock-on effects,
+    I'm not sure of the ramifications.
+    '''
     def interceptMethod(self, method, interceptClass):
       pass

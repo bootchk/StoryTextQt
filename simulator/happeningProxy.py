@@ -12,8 +12,7 @@ Signals Versus Events
 Qt distinguishes events and signals.
 (Unlike GTK where the toolkit converts external events to signals.)
 For storytext purposes, they are both "GUIEvents", or "happenings."
-A GUIEvent is a proxy, a base class representing either low-level (QEvent) or high-level (Qt Signal).
-
+A generic StoryText GuiEvent is a proxy, a base class representing either low-level (QEvent) or high-level (Qt Signal).
 '''
 
 class QtHappeningProxy(GuiEvent):
@@ -24,22 +23,25 @@ class QtHappeningProxy(GuiEvent):
     Stereotype: Proxy: stand-in for the real thing.
     
     Responsibility:
-    Know:
-    - info to reconstruct a real happening
-    - changeMethod to receive real happening
+    - query widget whether it handles or emits happening
+    - know info to reconstruct a real happening
+    - connectRecord to intercept happening (for recording)
+    - changeMethod to cause a real happening in the SUT (for replaying)
         
     Subclasses: 
-    - event happening (QEvent, from external input devices and window manager.) 
-    - signal happening (QSignal, intra-application.)
+    - event: HappeningEventProxy: (QEvent, from external input devices and window manager.) 
+    - signal: HappeningSignalProxy (QSignal, intra-application.)
     '''
   
     def __init__(self, name, widget, *args):
         GuiEvent.__init__(self, name, widget)
-        ''' Intercept methods that affect storytext snooping. '''
+        ''' Intercept certain methods that affect storytext snooping. '''
         # self.interceptMethod(getWidgetPropagationStopMethod(widget), EmissionStopIntercept)
         """
         Why?  Something about storytext is a default handler and not getting signals unless we intercept stop??
-        I don't think this pertains to Qt: no way to stop a signal in Qt.
+        I don't think this pertains to Qt: 
+        - no way to stop a QSignal in Qt.
+        - accept() and reject() methods follow StoryText interception and don't affect.
         # stop_emission() method on gobject (super of widget.)
         self.interceptMethod(self.widget.stop_emission, EmissionStopIntercept)
         # emit_stop_by_name() method on widget
@@ -56,17 +58,6 @@ class QtHappeningProxy(GuiEvent):
         # Name of widget's corresponding method to call to generate signal.
         self.widgetSignalCorrespondingMethodName = None
     
-    '''
-    lkk
-    By reimplementing GuiEvent.interceptMethod(),
-    prevent "NoneType has no attribute sendEvent" for getSelf(sendEvent()).
-    I.E. sendEvent is a class method and has no self instance.
-    We don't need to intercept any methods anyway???
-    '''
-    """
-    def interceptMethod(self, method, interceptClass):
-      pass
-    """
 
     @staticmethod
     def disableIntercepts(window):
@@ -89,22 +80,13 @@ class QtHappeningProxy(GuiEvent):
 
 
     @classmethod
-    def widgetHasHappeningSignature(cls, widgetAdaptor, happeningName):
-      '''
-      Pure virtual method: each subclass must implement.
-      '''
-      raise NotImplementedError
-    
-    
-    
-    @classmethod
     def canHandleEvent(cls, widget, happeningName, *args):
         '''
-        Can widget handle (or emit) happeningName?
+        Can widget handle (or emit!) happeningName?
         
         Note storytext calls it an *event*, here we use *happening* to mean either QEvent or Qt Signal.
         '''
-        # storytext signalProxy class has happeningName AND GUI widget class has happeningName (signal or handler method)
+        # HappeningProxy class has happeningName AND GUI widget class has happeningName (signal or handler method)
         result = cls.getAssociatedSignal(widget) == happeningName and cls.widgetHasHappeningSignature(widget, happeningName)
         """
         lkk ????? I'm still trying to decide if this is appropriate for Qt.
@@ -118,6 +100,17 @@ class QtHappeningProxy(GuiEvent):
           print "Widget", widget, "not handling happening", happeningName
         """
         return result
+
+
+    @classmethod
+    def widgetHasHappeningSignature(cls, widgetAdaptor, happeningName):
+      '''
+      Pure virtual method: each subclass must implement.
+      '''
+      raise NotImplementedError
+    
+    
+    
 
         
         
@@ -142,14 +135,19 @@ class QtHappeningProxy(GuiEvent):
         
         Subclasses may intercept before (event) or after (signal) the happening.
         
-        Implementation: call a subclass recorderMethod.
+        Implementation: delegate to subclass interceptHappeningToRecorder().
         '''
         # assert the parameter "recorderMethod" is writeEvent() method of scriptEngine.recorder
-        self.interceptHappeningToRecorder(communicantWidget=self.widget.widget, interceptMethod=recorderMethod)
+        self.interceptHappeningToRecorder(communicantWidget=self.getRealWidget(), interceptMethod=recorderMethod)
       
 
     def outputForScript(self, widget, *args):
         return self._outputForScript(*args)
+
+
+    def _outputForScript(self, *args):
+        return self.name
+
 
     """
     # Qt requires a slot for signal handlers
@@ -173,10 +171,6 @@ class QtHappeningProxy(GuiEvent):
         return GuiEvent.shouldRecord(self, *args) and self.widgetVisible()
 
 
-    def _outputForScript(self, *args):
-        return self.name
-
-
 
     '''
     Properties of real widget.
@@ -185,7 +179,7 @@ class QtHappeningProxy(GuiEvent):
     This is tricky:
     self.widget is a WidgetAdapter.
     self.widget.isVisible calls WidgetAdapter.__getattr__ which returns the method of the real widget.
-    self.widget.isVisible() calls the read widget's method.
+    self.widget.isVisible() calls the real widget's method.
     '''
     def widgetVisible(self):
         return self.widget.isVisible()
@@ -199,12 +193,16 @@ class QtHappeningProxy(GuiEvent):
     
     '''
     Real widget API.
-    self.widget is a WidgetAdapter.
-    Real widget is instance of class in the adapted GUI TK.
+
     Note elsewhere the different ways to get attributes of real widget.
-    
     '''
     def getRealWidget(self):
+      '''
+      Real widget: instance of some widget class in the adapted GUI TK.
+      self.widget is a WidgetAdapter.
+      
+      !!! Subclasses may reimplement to refer to anonymous viewported Widget.
+      '''
       return self.widget.widget
     
     

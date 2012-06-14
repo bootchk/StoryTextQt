@@ -33,7 +33,7 @@ class StorytextQtEventFilter(QObject):
     # print "Event filter invoked for event type:", qtEvent.type()
     # Filter on eventType
     if qtEvent.type() == self.eventType:
-      # print "Intercepted event"
+      #print "Intercepted event", self.eventType
       '''
       Call interception method with arguments (widget, real QEvent, args known at install time).
       Two cases:
@@ -45,7 +45,8 @@ class StorytextQtEventFilter(QObject):
       '''
       self.interceptionMethod(widget, qtEvent, *self.interceptArgs )
     else:
-      print "Not intercept event type:", qtEvent.type(), "in filter type:", self.eventType
+      #print "Not intercept event type:", qtEvent.type(), "in filter type:", self.eventType
+      pass
     
     # Always let the event through.  False means: not handled, don't stop the event.
     return False
